@@ -35,6 +35,12 @@ Visit the full documentation at [https://ochsenfeld-lab.github.io/adaptive_sampl
 
 *   Adaptive path collective variables (PCVs) [14, 15]
 
+## Sampling units
+
+CV definitions and `periodicity` use angstrom for distances and degrees for angles and torsions. Sampling classes convert these values to bohr and radians internally. Confinement force constants use kJ/mol per squared input CV unit. `get_pmf()` returns kJ/mol for ABF, the eABF family, WTM, and OPES; internal bias potentials remain in hartree. The grids passed to offline CZAR and MBAR functions contain bin centers.
+
+The OPES explore PMF uses the fixed point scale of the explore bias. Explore trajectories may take longer to reach that fixed point, so the returned profile is an estimate during convergence.
+
 ## Install:
 To install adaptive_sampling type:
 ```shell
