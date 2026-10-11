@@ -22,20 +22,21 @@ def integrate(
         pmf (np.ndarray): potential of mean force
         rho (np.ndarray): probability density
     """
-    data = np.copy(mean_force)
-
-    if method == "simpson":
-        data[1:-1] *= 2.0
-        data[2:-1:2] *= 2.0
-        pmf = np.full(len(data), dx / 3.0)
-    elif method == "trapezoid":
-        data[1:-1] *= 2.0
-        pmf = np.full(len(data), dx / 2.0)
-    else:  # method == 'rectangle':
-        pmf = np.full(len(data), dx)
-
-    for i in range(len(pmf)):
-        pmf[i] *= data[0 : i + 1].sum()
+    data = np.asarray(mean_force, dtype=float)
+    pmf = np.zeros_like(data)
+    if method == "trapezoid":
+        pmf[1:] = np.cumsum((data[:-1] + data[1:]) * dx / 2.0)
+    elif method == "simpson":
+        # An odd prefix ends with a trapezoid; each even prefix ends with a Simpson pair.
+        for i in range(1, len(data)):
+            if i % 2:
+                pmf[i] = pmf[i - 1] + (data[i - 1] + data[i]) * dx / 2.0
+            else:
+                pmf[i] = pmf[i - 2] + (data[i - 2] + 4 * data[i - 1] + data[i]) * dx / 3.0
+    elif method == "rectangle":
+        pmf[1:] = np.cumsum(data[1:] * dx)
+    else:
+        raise ValueError(f"Unknown integration method: {method}")
 
     if normalize:
         RT = R_in_SI * equil_temp / 1000.0
@@ -75,16 +76,15 @@ def czar(
 
     RT = R_in_SI * equil_temp / 1000.0
 
-    # assumes that periodic boundary can only be at bin edges
+    # The supplied grid contains bin centers; boundaries lie half a bin away.
     dx2 = (grid[1] - grid[0]) / 2.0
-    grid_local = grid + dx2
 
     # get force constant from sigma
     k = RT / (sigma * sigma)
 
     hist = np.zeros(len(grid), dtype=float)
     f_corr = np.zeros(len(grid), dtype=float)
-    for i, x in enumerate(grid_local):
+    for i, x in enumerate(grid):
         la_x = la[np.where(np.logical_and(cv >= x - dx2, cv < x + dx2))]
         hist[i] = len(la_x)
         if hist[i] > 0:
@@ -93,7 +93,7 @@ def czar(
 
     log_hist = np.log(hist, out=np.zeros_like(hist), where=(hist != 0))
 
-    return -RT * np.gradient(log_hist, grid_local) + f_corr
+    return -RT * np.gradient(log_hist, grid) + f_corr
 
 
 def force_error(

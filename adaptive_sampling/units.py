@@ -14,6 +14,6 @@ atomic_to_bar = 2.9421912e8
 
 # constants
 kB_in_SI = 1.380648e-23
-R_in_SI = 8.314
 kB_in_atomic = kB_in_SI * J_to_atomic
+R_in_SI = kB_in_atomic * atomic_to_kJmol * 1000.0
 h_in_SI = 6.62607004e-34

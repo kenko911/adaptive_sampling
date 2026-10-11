@@ -1,4 +1,4 @@
-import sys
+from pathlib import Path
 import pytest
 import torch
 from math import isclose
@@ -7,14 +7,14 @@ from adaptive_sampling.colvars.path_cv import PathCV
 from adaptive_sampling.colvars.utils import *
 from adaptive_sampling.units import BOHR_to_ANGSTROM
 
-sys.path.append("resources/")
+RESOURCE_DIR = Path(__file__).parent / "resources"
 
 
 @pytest.mark.parametrize(
     "input, path, bounds",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             [
                 torch.tensor([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
                 torch.tensor([[3.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
@@ -49,7 +49,7 @@ def test_init_cartesian(input, path, bounds):
     "input, path, bounds",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             [
                 torch.tensor([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]),
                 torch.tensor([[0.0, 0.0, 0.0], [3.0, 0.0, 0.0]]),
@@ -82,7 +82,7 @@ def test_init_zmatrix(input, path, bounds):
     "input, path, bounds",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             [
                 torch.tensor([1.0]),
                 torch.tensor([3.0]),
@@ -119,7 +119,7 @@ def test_init_cv_space(input, path, bounds):
     "input, coords1, coords2, coords3, coords4, coords5",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             torch.tensor([2.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             torch.tensor([3.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
@@ -158,7 +158,7 @@ def test_calculate_gpath(input, coords1, coords2, coords3, coords4, coords5):
     "input, coords1, coords2, coords3, coords4, coords5",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             torch.tensor([1.0, 0.1, 0.0, 0.0, 0.0, 0.0]),
             torch.tensor([2.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
             torch.tensor([3.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
@@ -188,18 +188,19 @@ def test_calculate_path(input, coords1, coords2, coords3, coords4, coords5):
     cv3 = cv.calculate_path(coords3)
     cv4 = cv.calculate_path(coords4)
     cv5 = cv.calculate_path(coords5)
-    assert isclose(float(cv1), float(0.0), abs_tol=1e-2)
-    assert isclose(float(cv2), float(0.25), abs_tol=1e-1)
+    # A finite lambda gives nonzero weight to neighboring path nodes.
+    assert isclose(float(cv1), float(0.02746), abs_tol=1e-3)
+    assert isclose(float(cv2), float(0.26675), abs_tol=1e-3)
     assert isclose(float(cv3), float(0.5), abs_tol=1e-2)
-    assert isclose(float(cv4), float(0.75), abs_tol=1e-1)
-    assert isclose(float(cv5), float(1.0), abs_tol=1e-2)
+    assert isclose(float(cv4), float(0.73325), abs_tol=1e-3)
+    assert isclose(float(cv5), float(0.97621), abs_tol=1e-3)
 
 
 @pytest.mark.parametrize(
     "input, coords1, coords2, coords3, coords4, coords5",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             torch.tensor([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
             torch.tensor([2.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
             torch.tensor([3.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
@@ -241,18 +242,19 @@ def test_calculate_path_z(input, coords1, coords2, coords3, coords4, coords5):
     cv4 = cv.path_z
     cv.calculate_path(coords5)
     cv5 = cv.path_z
-    assert isclose(float(cv1), float(1.78), abs_tol=1e-2)
-    assert isclose(float(cv2), float(1.78), abs_tol=1e-2)
-    assert isclose(float(cv3), float(1.78), abs_tol=1e-2)
-    assert isclose(float(cv4), float(1.78), abs_tol=1e-2)
-    assert isclose(float(cv5), float(1.78), abs_tol=1e-2)
+    # z is a soft minimum of RMSD in bohr over the six Cartesian components.
+    assert isclose(float(cv1), float(0.69875), abs_tol=1e-3)
+    assert isclose(float(cv2), float(0.72789), abs_tol=1e-3)
+    assert isclose(float(cv3), float(0.64145), abs_tol=1e-3)
+    assert isclose(float(cv4), float(0.72789), abs_tol=1e-3)
+    assert isclose(float(cv5), float(0.69875), abs_tol=1e-3)
 
 
 @pytest.mark.parametrize(
     "input, coords1, coords2",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             torch.tensor([3.0, 1.0, 0.0, 0.0, 0.0, 0.0]),
             torch.tensor([3.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
         )
@@ -294,7 +296,7 @@ def test_internals(coords, zmatrix):
     "input, coords",
     [
         (
-            "resources/path.xyz",
+            str(RESOURCE_DIR / "path.xyz"),
             torch.tensor([2.0]),
         )
     ],

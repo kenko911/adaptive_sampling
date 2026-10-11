@@ -678,7 +678,7 @@ class eABF(ABF, EnhancedSampling):
         from ..units import BOHR_to_ANGSTROM, DEGREES_per_RADIAN
         data = {}
         for i in range(self.ncoords):
-            if self.cv_type[i] == "angle":
+            if self.cv_type[i] in ("angle", "torsion"):
                 self.ext_traj[:, i] *= DEGREES_per_RADIAN
             elif self.cv_type[i] == "distance":
                 self.ext_traj[:, i] *= BOHR_to_ANGSTROM

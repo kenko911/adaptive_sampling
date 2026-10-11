@@ -1,6 +1,9 @@
 import numpy as np
+import pytest
 from adaptive_sampling.colvars.plumed_cv import PLUMED_CV
 from adaptive_sampling.units import *
+
+pytest.importorskip("plumed")
 
 
 def test_init_plumed():

@@ -26,9 +26,6 @@ class CV:
         self.requires_grad = requires_grad
         self.device = device
 
-        if self.requires_grad:
-            torch.autograd.set_detect_anomaly(True)
-
         md_state = self.the_mol.get_sampling_data()
 
         self.mass = torch.from_numpy(md_state.mass).float()
@@ -40,6 +37,8 @@ class CV:
         self.requires_grad = requires_grad
         self.gradient = None
         self.cv = None
+        self.compute_divergence = False
+        self.divergence = None
         self.type = "default"
         self.reference = None
         self.reference_internal = None
@@ -167,14 +166,31 @@ class CV:
 
         self.cv = torch.arccos(torch.dot(-q12_u, q23_u))
 
-        # get forces
         if self.requires_grad:
-            self.gradient = torch.autograd.grad(
-                self.cv, self.coords, allow_unused=True
-            )[0]
-            self.gradient = self.gradient.detach().numpy()
+            self._angular_gradient(cv_def)
 
         return float(self.cv)
+
+    def _angular_gradient(self, cv_def):
+        gradient = torch.autograd.grad(
+            self.cv, self.coords, create_graph=self.compute_divergence
+        )[0]
+        if self.compute_divergence:
+            # Trace the Jacobian of the same inverse-gradient field used by ABF.
+            inverse_gradient = gradient / gradient.square().sum()
+            atoms = {
+                atom
+                for center in cv_def
+                for atom in (center if isinstance(center, list) else [center])
+            }
+            components = [3 * atom + axis for atom in atoms for axis in range(3)]
+            self.divergence = sum(
+                torch.autograd.grad(
+                    inverse_gradient[i], self.coords, retain_graph=True
+                )[0][i]
+                for i in components
+            ).item()
+        self.gradient = gradient.detach().numpy()
 
     def torsion(self, cv_def: list) -> float:
         """torsion angle between four mass centers in range(-pi,pi)
@@ -214,12 +230,8 @@ class CV:
 
         self.cv = torch.atan2(torch.dot(torch.linalg.cross(q23_u, n1), n2), torch.dot(n1, n2))
 
-        # get forces
         if self.requires_grad:
-            self.gradient = torch.autograd.grad(
-                self.cv, self.coords, allow_unused=True
-            )[0]
-            self.gradient = self.gradient.detach().numpy()
+            self._angular_gradient(cv_def)
 
         return float(self.cv)
 
@@ -683,6 +695,7 @@ class CV:
            xi: value of collective variable
            gradient: gradient of collective variable
         """
+        self.divergence = None
         if cv.lower() == "x":
             xi = self.x()
             self.type = "2d"
@@ -697,7 +710,7 @@ class CV:
             self.type = "angle"
         elif cv.lower() == "torsion":
             xi = self.torsion(atoms)
-            self.type = "angle"
+            self.type = "torsion"
         elif cv.lower() == "minimum_distance":
             xi = self.distance_min(atoms)
             self.type = "distance"

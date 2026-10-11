@@ -43,7 +43,6 @@ class GRAPH_CV:
 
         self.requires_grad = requires_grad
         if self.requires_grad:
-            torch.autograd.set_detect_anomaly(True)
             if self.parallel:
                 raise ValueError(
                     " >>> WARNING: cannot use multiprocessing if contact matrix `requires_grad`"

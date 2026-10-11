@@ -192,7 +192,7 @@ class OPES(EnhancedSampling):
             bias_force += forces[i] * grad_cv[i]
 
         # store biased histogram along CV for output
-        if out_file and self._check_boundaries(cv):
+        if self._check_boundaries(cv):
             bink = self.get_index(cv)
             self.histogram[bink[1], bink[0]] += 1
 
@@ -213,7 +213,7 @@ class OPES(EnhancedSampling):
                 self.pmf = self.get_pmf()
                 output = {
                     "hist": self.histogram,
-                    "free energy": self.pmf * atomic_to_kJmol,
+                    "free energy": self.pmf,
                     "OPES Pot": self.bias_potential * atomic_to_kJmol,
                 }
                 self.write_output(output, filename=out_file)
@@ -226,15 +226,13 @@ class OPES(EnhancedSampling):
         """Calculate current PMF estimate on `self.grid`
 
         Returns:
-            pmf: current PMF estimate from OPES kernels
+            pmf: current PMF estimate from OPES kernels in kJ/mol
         """
-        pmf = (
-            -self.bias_potential / self.gamma_prefac
-            if not self.explore
-            else -self.bias_potential
-        )
+        scale = self.gamma / self.gamma_prefac if self.explore else 1.0 / self.gamma_prefac
+        pmf = -self.bias_potential * scale
         pmf -= pmf.min()
-        return pmf
+        from ..units import atomic_to_kJmol
+        return pmf * atomic_to_kJmol
 
     def write_traj(self, filename="CV_traj.dat"):
         data = {
@@ -620,7 +618,7 @@ class OPES(EnhancedSampling):
                     val_gaussians = self.calc_gaussians(cv)
                 else:
                     val_gaussians, kde_der = self.calc_gaussians(cv, requires_grad=True)
-                    derivative[0][0, i] = kde_der
+                    derivative[0][0, i] = kde_der[0]
                 prob_dist[0, i] = np.sum(val_gaussians)
         else:
             for i, x in enumerate(self.grid[0]):

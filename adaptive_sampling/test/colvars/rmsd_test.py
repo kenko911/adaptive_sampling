@@ -1,10 +1,13 @@
 import torch
+from pathlib import Path
 import pytest
 import numpy as np
 from adaptive_sampling.colvars.colvars import CV
 from adaptive_sampling.colvars.utils import *
 from adaptive_sampling.interface.sampling_data import SamplingData
 from adaptive_sampling.units import *
+
+RESOURCE_DIR = Path(__file__).parent / "resources"
 
 
 class MD:
@@ -182,7 +185,7 @@ def test_quaternion_1(a, b, expected_nofit, expected_fit):
     "file, coords",
     [
         (
-            "resources/m1.xyz",
+            str(RESOURCE_DIR / "m1.xyz"),
             torch.tensor([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]) / BOHR_to_ANGSTROM,
         )
     ],
@@ -193,7 +196,7 @@ def test_read_xyz(file, coords):
 
 
 @pytest.mark.parametrize(
-    "coords1, coords2, rmsd_fit", [("resources/m1.xyz", "resources/m2.xyz", 0.000)]
+    "coords1, coords2, rmsd_fit", [(str(RESOURCE_DIR / "m1.xyz"), str(RESOURCE_DIR / "m2.xyz"), 0.000)]
 )
 def test_rmsd(coords1, coords2, rmsd_fit):
     xyz1 = read_xyz(coords1)

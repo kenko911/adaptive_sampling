@@ -22,10 +22,7 @@ class PLUMED_CV:
         if not natoms:
             raise ValueError(" >>> PLUMED: natoms missing for plumed interface")
 
-        try:
-            import plumed
-        except ImportError:
-            print("Found no plumed library. Install via: pip install plumed" )
+        import plumed
 
         self.natoms = natoms
         self.masses = np.ones(natoms)

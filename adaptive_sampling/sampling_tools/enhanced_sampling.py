@@ -21,7 +21,7 @@ class EnhancedSampling(ABC):
         f_conf: force constant for confinement of CVs to the range of interest with harmonic walls
         output_freq: frequency in steps for writing outputs
         multiple_walker: share bias with other simulations via buffer file
-        periodicity: periodicity of CVs, [[lower_boundary0, upper_boundary0], ...]
+        periodicity: periodicity of CVs in the input CV units, [[lower_boundary0, upper_boundary0], ...]
     """
 
     def __init__(
@@ -57,17 +57,23 @@ class EnhancedSampling(ABC):
         self.f_conf = np.array([f_conf for _ in range(self.ncoords)], dtype=float)
 
         self.cv_type = ["" for _ in range(self.ncoords)]
+        self.cv_divergence = np.zeros(self.ncoords)
         (xi, delta_xi) = self.get_cv(**kwargs)
 
         # periodic boundary conditions
         self.periodicity = (
-            periodicity if periodicity else [None for _ in range(self.ncoords)]
+            [None for _ in range(self.ncoords)]
+            if periodicity is None
+            else [None if bounds is None else list(bounds) for bounds in periodicity]
         )
 
         # unit conversion
         self.minx, self.maxx, self.dx = self.unit_conversion_cv(
             self.minx, self.maxx, self.dx
         )
+        for i, bounds in enumerate(self.periodicity):
+            if bounds is not None and self.cv_type[i] in ("angle", "torsion"):
+                self.periodicity[i] = [value / DEGREES_per_RADIAN for value in bounds]
         (self.f_conf,) = self.unit_conversion_force(self.f_conf)
 
         # store trajectories of CVs and temperature and epot between outputs
@@ -122,7 +128,7 @@ class EnhancedSampling(ABC):
         if self.verbose:
             for i in range(self.ncoords):
                 print(f"\n >>> INFO: Initialize {self.cv[i]} as collective variable:")
-                if self.cv_type[i] == "angle":
+                if self.cv_type[i] in ("angle", "torsion"):
                     output_dat = (
                         self.minx[i] * DEGREES_per_RADIAN,
                         self.maxx[i] * DEGREES_per_RADIAN,
@@ -208,6 +214,7 @@ class EnhancedSampling(ABC):
         Returns:
             bin_x (list):
         """
+        xi = np.asarray(xi).reshape(-1)
         bin_x = [-1, -1]
         for i in range(self.ncoords):
             bin_x[i] = int(np.floor(np.abs(xi[i] - self.minx[i]) / self.dx[i]))
@@ -229,7 +236,7 @@ class EnhancedSampling(ABC):
         from ..units import BOHR_to_ANGSTROM, DEGREES_per_RADIAN
         for i in range(self.ncoords):
             for arg in args:
-                if self.cv_type[i] == "angle":
+                if self.cv_type[i] in ("angle", "torsion"):
                     arg[i] /= DEGREES_per_RADIAN
                 elif self.cv_type[i] == "distance":
                     arg[i] /= BOHR_to_ANGSTROM
@@ -247,9 +254,9 @@ class EnhancedSampling(ABC):
         from ..units import BOHR_to_ANGSTROM, DEGREES_per_RADIAN, atomic_to_kJmol
         for i in range(self.ncoords):
             for arg in args:
-                if self.cv_type == "angle":
+                if self.cv_type[i] in ("angle", "torsion"):
                     arg[i] *= DEGREES_per_RADIAN * DEGREES_per_RADIAN / atomic_to_kJmol
-                elif self.cv_type == "distance":
+                elif self.cv_type[i] == "distance":
                     arg[i] *= BOHR_to_ANGSTROM * BOHR_to_ANGSTROM / atomic_to_kJmol
                 else:
                     arg[i] /= atomic_to_kJmol
@@ -271,6 +278,8 @@ class EnhancedSampling(ABC):
         for i in range(self.ncoords):
             xi[i], grad_xi[i] = self.the_cv.get_cv(self.cv[i], self.atoms[i], **kwargs)
             self.cv_type[i] = self.the_cv.type
+            if self.the_cv.divergence is not None:
+                self.cv_divergence[i] = self.the_cv.divergence
 
         return xi, grad_xi
 
@@ -316,10 +325,10 @@ class EnhancedSampling(ABC):
         """
         grid = [np.copy(g) for g in self.grid]
         for i in range(self.ncoords):
-            if self.the_cv.type == "angle":
+            if self.cv_type[i] in ("angle", "torsion"):
                 from ..units import DEGREES_per_RADIAN
                 grid[i] *= DEGREES_per_RADIAN
-            elif self.the_cv.type == "distance":
+            elif self.cv_type[i] == "distance":
                 from ..units import BOHR_to_ANGSTROM
                 grid[i] *= BOHR_to_ANGSTROM
 
@@ -385,7 +394,7 @@ class EnhancedSampling(ABC):
                         )
                     )  # time in fs
                     for i in range(len(self.traj[0])):
-                        if self.cv_type[i] == "angle":
+                        if self.cv_type[i] in ("angle", "torsion"):
                             traj_out.write(
                                 "%14.6f\t"
                                 % (

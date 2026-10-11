@@ -54,7 +54,6 @@ class AseMD:
         self.mass = self.molecule.get_masses()
         self.masses = np.repeat(self.mass, 3)
         self.natoms = int(len(self.coords) / 3)
-        self.ndegrees = 3.0e0 * self.natoms - 6.0e0
         self.forces = np.zeros_like(self.coords)
         self.momenta = np.zeros_like(self.coords)
         self.bias_forces = np.zeros_like(self.forces)
@@ -66,6 +65,11 @@ class AseMD:
         else:
             self.active_atoms = np.arange(self.natoms)
         self.n_active = len(self.active_atoms)
+        self.ndegrees = (
+            3.0 * self.n_active - 6.0
+            if self.n_active > 2
+            else 3.0 * self.n_active
+        )
         self.frozen_atoms = np.delete(np.arange(self.natoms), self.active_atoms)
 
         # Random Number Generator
@@ -283,7 +287,7 @@ class AseMD:
         self.ekin = (np.power(self.momenta, 2) / self.masses).sum() / 2.0
 
         # Temperature
-        self.temp = self.ekin * 2.0e0 / (3.0e0 * self.n_active * units.kB_in_atomic)
+        self.temp = self.ekin * 2.0e0 / (self.ndegrees * units.kB_in_atomic)
 
         # Volume
         r0 = np.sqrt(5.0e0 / 3.0e0) * np.sqrt(
@@ -363,7 +367,7 @@ class AseMD:
         if temperature == None:
             return
         temp = (np.power(self.momenta, 2) / self.masses).sum() / (
-            3.0e0 * self.n_active * units.kB_in_atomic
+            self.ndegrees * units.kB_in_atomic
         )
         self.momenta *= np.sqrt(temperature / temp)
 

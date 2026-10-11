@@ -120,7 +120,7 @@ class Harmonic_Constraint:
             k_bohr = k * BOHR_to_ANGSTROM * BOHR_to_ANGSTROM
             return k_bohr, x0_bohr
 
-        elif type == "angle":
+        elif type in ("angle", "torsion"):
             x0_rad = x0 / DEGREES_per_RADIAN
             k_rad = k * DEGREES_per_RADIAN * DEGREES_per_RADIAN
             return k_rad, x0_rad
@@ -142,7 +142,7 @@ class Harmonic_Constraint:
             for i, (cv, epot, type) in enumerate(zip(cvs, epots, cv_types)):
                 if type == "distance":
                     cv *= BOHR_to_ANGSTROM
-                elif type == "angle":
+                elif type in ("angle", "torsion"):
                     cv *= DEGREES_per_RADIAN
                 f.write(f"{cv:12.6f} {epot:12.6f}")
             f.write("\n")

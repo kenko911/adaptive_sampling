@@ -1,13 +1,16 @@
 import numpy as np
+from pathlib import Path
 
 from adaptive_sampling.sampling_tools.feneb import FENEB
+
+RESOURCE_DIR = Path(__file__).parent / "resources"
 
 
 def test_init_path():
     feneb = FENEB(
         1.0,
         10.0,
-        ["resources/feneb_start.xyz", "resources/feneb_end.xyz"],
+        [str(RESOURCE_DIR / "feneb_start.xyz"), str(RESOURCE_DIR / "feneb_end.xyz")],
         nimages=1,
         convert_units=False,
     )
@@ -21,7 +24,7 @@ def test_init_path():
 
 def test_tangent_vector():
     feneb = FENEB(
-        1.0, 10.0, ["resources/feneb_start.xyz", "resources/feneb_end.xyz"], nimages=1
+        1.0, 10.0, [str(RESOURCE_DIR / "feneb_start.xyz"), str(RESOURCE_DIR / "feneb_end.xyz")], nimages=1
     )
     tau = feneb.tangent_vector([feneb.path[0], feneb.path[1], feneb.path[2]])
     result = [
@@ -34,7 +37,7 @@ def test_opt_node_spacing():
     feneb = FENEB(
         100.0,
         100.0,
-        ["resources/feneb_start.xyz", "resources/feneb_end.xyz"],
+        [str(RESOURCE_DIR / "feneb_start.xyz"), str(RESOURCE_DIR / "feneb_end.xyz")],
         nimages=1,
         maxiter_spring=10000,
         conf_spring=1.0e-3,

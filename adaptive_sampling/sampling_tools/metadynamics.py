@@ -136,7 +136,7 @@ class WTM(EnhancedSampling):
             self._kinetics(grad_cv)
 
         # store biased histogram along CV for output
-        if out_file and self._check_boundaries(cv):
+        if self._check_boundaries(cv):
             bink = self.get_index(cv)
             self.histogram[bink[1], bink[0]] += 1
 
@@ -160,7 +160,7 @@ class WTM(EnhancedSampling):
                 self.pmf = self.get_pmf()
                 output = {
                     "hist": self.histogram,
-                    "free energy": self.pmf * atomic_to_kJmol,
+                    "free energy": self.pmf,
                     "MtD Pot": self.metapot * atomic_to_kJmol,
                 }
                 self.write_output(output, filename=out_file)
@@ -173,13 +173,14 @@ class WTM(EnhancedSampling):
         """Calculate current PMF estimate on `self.grid`
 
         Returns:
-            pmf: current PMF estimate from Mtd kernels
+            pmf: current PMF estimate from Mtd kernels in kJ/mol
         """
+        from ..units import atomic_to_kJmol
         pmf = -self.metapot
         if self.well_tempered:
             pmf *= self.wtm_prefac
         pmf -= pmf.min()
-        return pmf
+        return pmf * atomic_to_kJmol
 
     def write_traj(self, filename="CV_traj.dat"):
         data = {

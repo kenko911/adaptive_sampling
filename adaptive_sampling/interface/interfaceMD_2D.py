@@ -182,7 +182,7 @@ class MD:
         """
         self.ekin = (np.square(self.momenta) / self.masses).sum()
         self.ekin /= 2.0
-        self.temp = (self.ekin * 2.0) / units.kB_in_atomic
+        self.temp = self.ekin / units.kB_in_atomic
 
     # -----------------------------------------------------------------------------------------------------
     def propagate(self, langevin=True, friction=1.0e-3):

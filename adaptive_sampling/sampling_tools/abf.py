@@ -25,9 +25,14 @@ class ABF(EnhancedSampling):
 
     def __init__(self, *args, nfull: int = 500, **kwargs):
         super().__init__(*args, **kwargs)
+        self.the_cv.compute_divergence = True
         self.nfull = nfull
         self.var_force = np.zeros_like(self.bias)
         self.m2_force = np.zeros_like(self.bias)
+
+    def reinit_cv(self):
+        super().reinit_cv()
+        self.the_cv.compute_divergence = True
 
     def step_bias(self, write_output: bool = True, write_traj: bool = True, **kwargs):
         from ..units import kB_in_atomic
@@ -59,7 +64,7 @@ class ABF(EnhancedSampling):
                 force_sample[i] = np.dot(
                     md_state.forces, v_i
                 ) - kB_in_atomic * self.equil_temp * self._divergence_xi(
-                    xi[i], self.cv_type[i]
+                    xi[i], self.cv_type[i], i
                 )
 
                 (
@@ -227,13 +232,13 @@ class ABF(EnhancedSampling):
                         f" >>> Fatal Error: Failed to sync bias with `{mw_file}.npz`."
                     )
 
-    def _divergence_xi(self, xi, cv):
-        """Calculate divergence of collective variable"""
+    def _divergence_xi(self, xi, cv, index):
+        """Divergence of the inverse-gradient field used for the ABF force sample."""
         if cv.lower() == "distance":
             div = 2.0 / xi
-        elif cv.lower() == "angle":
-            div = 1.0 / np.tan(xi)
-        elif cv.lower() in ["torsion", "2d"]:
+        elif cv.lower() in ("angle", "torsion"):
+            div = self.cv_divergence[index]
+        elif cv.lower() == "2d":
             div = 0.0
         else:
             raise NotImplementedError(
